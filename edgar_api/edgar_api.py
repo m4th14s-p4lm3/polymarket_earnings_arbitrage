@@ -28,7 +28,7 @@ class EDGAR:
 
     def __init__(self):
         self.__SYSTEM_NAME__ = "CTU Prague TAB team"
-        self.__email__ = "mathais.palme@seznam.cz"
+        self.__email__ = "mathias.palme@seznam.cz"
         self.headers = {'User-Agent': f"{self.__SYSTEM_NAME__} {self.__email__}"}
 
         EDGAR.COMPANY_TICKERS_AND_CIKS = self.get_tickers()
