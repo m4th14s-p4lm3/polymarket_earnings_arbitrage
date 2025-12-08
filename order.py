@@ -42,7 +42,7 @@ class EarningsMarket:
         # if not edgar_sentinel.running:
         #     raise "ERROR: Edgar sentinel is not running!"
 
-        self.thred:Thread = None
+        self.thread:Thread = None
         self.alert:Event = Event()
 
         self.resolution:str = None
@@ -59,8 +59,8 @@ class EarningsMarket:
 
     def run(self):
         self.edgar_sentinel.set_alert(self.cik, self)
-        self.thred = Thread(target=self.trade)
-        self.thred.start()
+        self.thread = Thread(target=self.trade)
+        self.thread.start()
         
     def trade(self):
         # while True:
@@ -96,17 +96,28 @@ class EarningsMarket:
 
 if __name__ == "__main__":
     edgar_sentinel = EdgarSentinel()
-    time.sleep(1)
+    # time.sleep(1)
     
     # kfy_url = "https://polymarket.com/event/kfy-quarterly-earnings-nongaap-eps-12-04-2025-1pt31"
     # kfy_em = EarningsMarket(kfy_url, edgar_sentinel)
 
     orcl_url = "https://polymarket.com/event/orcl-quarterly-earnings-nongaap-eps-12-08-2025-1pt64"
+
+    pcb_url = "https://polymarket.com/event/cpb-quarterly-earnings-nongaap-eps-12-09-2025-0pt73?tid=1765226600660"
+    azo_url = "https://polymarket.com/event/azo-quarterly-earnings-gaap-eps-12-09-2025-32pt58?tid=1765226611220"
+    dbi_url = "https://polymarket.com/event/dbi-quarterly-earnings-nongaap-eps-12-09-2025-0pt16?tid=1765226624433"
+    aso_url = "https://polymarket.com/event/aso-quarterly-earnings-nongaap-eps-12-09-2025-1pt06?tid=1765226633644"
+    
+    
     orcl_em = EarningsMarket(orcl_url, edgar_sentinel)
+
+    pcb_em = EarningsMarket(pcb_url, edgar_sentinel)
+    azo_em = EarningsMarket(azo_url, edgar_sentinel)
+    dbi_em = EarningsMarket(dbi_url, edgar_sentinel)
+    aso_em = EarningsMarket(aso_url, edgar_sentinel)
 
 
     print("Market is runnning...")
-    # print(mcd_em.slug)
     
     edgar_sentinel.run()
     print("Sentinel is running...")

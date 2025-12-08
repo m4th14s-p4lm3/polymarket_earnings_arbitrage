@@ -24,7 +24,7 @@ class EdgarSentinel:
     def __init__(self):
         self.edgar:EDGAR = EDGAR()
         self.logger:logging = logging.getLogger(__name__)
-        self.thred:Thread = None
+        self.thread:Thread = None
         self.running:bool = False
         self.cik_alerts:dict = {} # {cik : Event}
 
@@ -38,8 +38,8 @@ class EdgarSentinel:
         return self.running
 
     def run(self):
-        self.thred = Thread(target=self._watch)
-        self.thred.start()
+        self.thread = Thread(target=self._watch)
+        self.thread.start()
 
     def _watch(self):
         while True: # watch dog
