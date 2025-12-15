@@ -53,7 +53,7 @@ class EarningsMarket:
         # if not edgar_sentinel.running:
         #     raise "ERROR: Edgar sentinel is not running!"
 
-        self.thred: Thread = None
+        self.thread: Thread = None
         self.alert: Event = Event()
 
         self.resolution: str = None
@@ -91,8 +91,8 @@ class EarningsMarket:
 
     def run(self):
         self.edgar_sentinel.set_alert(self.cik, self)
-        self.thred = Thread(target=self.trade)
-        self.thred.start()
+        self.thread = Thread(target=self.trade)
+        self.thread.start()
         self.start_liquidity_logger(self.slug)
 
     def trade(self):
@@ -101,6 +101,11 @@ class EarningsMarket:
         self.alert.wait()
         print("ALERT TRIGGERED!!!!")
         logger.info(f"Trigger sent to slug: {self.slug}")
+
+        # get prices before oracle
+        price_yes = polymarket_api.DataFeed.get_market_price_for_token(self.outcome_addresses["Yes"])
+        price_no = polymarket_api.DataFeed.get_market_price_for_token(self.outcome_addresses["No"])
+        logger.info(f"Price after trigger - slug: {self.slug}, ticker: {self.ticker}, price_yes {price_yes}, price_no: {price_no}")
 
         timer_start = time.perf_counter()
         resolution = get_resolution(self.description, self.sec_url)
@@ -112,6 +117,7 @@ class EarningsMarket:
             resolution = resolution[0].upper() + resolution[1:].lower()
             # resolution = "Yes"
             address = self.outcome_addresses[resolution]
+            # get pricee after oracle
             price = polymarket_api.DataFeed.get_market_price_for_token(address)
             telegram_bot.send_message(
                 f"slug: {self.slug}, ticker: {self.ticker}, resolution: {resolution}, price: {price}, oracle time: {self.oracle_time}"
@@ -152,8 +158,7 @@ if __name__ == "__main__":
     len_em = EarningsMarket(len_url, edgar_sentinel)
 
     print("Market is runnning...")
-    # print(mcd_em.slug)
-
+    
     edgar_sentinel.run()
     print("Sentinel is running...")
 

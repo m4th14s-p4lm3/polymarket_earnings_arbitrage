@@ -40,8 +40,8 @@ class EdgarSentinel:
         return self.running
 
     def run(self):
-        self.thred = Thread(target=self._watch)
-        self.thred.start()
+        self.thread = Thread(target=self._watch)
+        self.thread.start()
 
     def _watch(self):
         while True:  # watch dog
