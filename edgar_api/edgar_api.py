@@ -179,39 +179,39 @@ class EDGAR:
 
 if __name__ == "__main__":
     edgar = EDGAR()
-    import time
-    from datetime import datetime, timezone, timedelta
-    from concurrent.futures import ThreadPoolExecutor, as_completed
-    import pdfkit
-    import os
+    # import time
+    # from datetime import datetime, timezone, timedelta
+    # from concurrent.futures import ThreadPoolExecutor, as_completed
+    # import pdfkit
+    # import os
 
-    ticker = "GS"
+    # ticker = "GS"
 
-    cik = edgar.get_cik_by_ticker(ticker)
-    print(edgar.get_submissions_by_cik(cik))
-    exit()
+    # cik = edgar.get_cik_by_ticker(ticker)
+    # print(edgar.get_submissions_by_cik(cik))
+    # exit()
 
-    accessionNumber, form, core_type, acceptanceDateTime, primaryDocument = edgar.deep_submission_search(cik)
-    data_path = "data"
-    output_path = os.path.join(data_path, ticker)
+    # accessionNumber, form, core_type, acceptanceDateTime, primaryDocument = edgar.deep_submission_search(cik)
+    # data_path = "data"
+    # output_path = os.path.join(data_path, ticker)
 
-    if not os.path.isdir(data_path):
-        os.mkdir(data_path)
+    # if not os.path.isdir(data_path):
+    #     os.mkdir(data_path)
 
-    # print(ticker)
-    if not os.path.isdir(output_path):
-        os.mkdir(output_path)
+    # # print(ticker)
+    # if not os.path.isdir(output_path):
+    #     os.mkdir(output_path)
 
-    cnt = 0
-    years_back = 5
-    dt_5ya = datetime.now(timezone.utc) - timedelta(days=years_back*365)
-    for i in range(len(core_type)):
-        dt = acceptanceDateTime[i] 
-        if dt > dt_5ya and form[i] in {"10-Q", "10-K", "8-K", "6-K"}:
-            document_url = f"{EDGAR.DATA_URL}{cik}/{"".join(accessionNumber[i].split("-"))}/"
-            print(acceptanceDateTime[i],",", document_url)
-            cnt+=1
-    print(cnt)
+    # cnt = 0
+    # years_back = 5
+    # dt_5ya = datetime.now(timezone.utc) - timedelta(days=years_back*365)
+    # for i in range(len(core_type)):
+    #     dt = acceptanceDateTime[i] 
+    #     if dt > dt_5ya and form[i] in {"10-Q", "10-K", "8-K", "6-K"}:
+    #         document_url = f"{EDGAR.DATA_URL}{cik}/{"".join(accessionNumber[i].split("-"))}/"
+    #         print(acceptanceDateTime[i],",", document_url)
+    #         cnt+=1
+    # print(cnt)
 
 
 
