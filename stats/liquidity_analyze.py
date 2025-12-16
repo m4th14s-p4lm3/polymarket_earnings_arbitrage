@@ -1,9 +1,10 @@
+import argparse
 import json
 import os
 from datetime import datetime
 
 # --- CONFIGURATION ---
-INPUT_FILE = "polymarket_liquidity.jsonl"
+DEFAULT_INPUT_FILE = "polymarket_liquidity.jsonl"
 
 
 def parse_order_book(bids, asks):
@@ -80,41 +81,56 @@ def print_table(title, records):
     print(f"Total Rows: {count}")
 
 
-def main():
-    if not os.path.exists(INPUT_FILE):
-        print(f"Error: File '{INPUT_FILE}' not found. Run your logger script first.")
-        return
-
-    print(f"Reading stats from: {INPUT_FILE}...")
+def main(files=None):
+    paths = files or [DEFAULT_INPUT_FILE]
 
     yes_records = []
     no_records = []
 
-    # 1. Read and separate data
-    with open(INPUT_FILE, "r") as f:
-        for line in f:
-            line = line.strip()
-            if not line:
-                continue
+    for path in paths:
+        if not os.path.exists(path):
+            print(f"Warning: File '{path}' not found. Skipping.")
+            continue
 
-            try:
-                data = json.loads(line)
-                side = data.get("outcome_side", "UNKNOWN").upper()
+        print(f"Reading stats from: {path}...")
 
-                if side == "YES":
-                    yes_records.append(data)
-                elif side == "NO":
-                    no_records.append(data)
-                else:
-                    # You can add a list for 'unknown' if you have old data
-                    pass
-            except json.JSONDecodeError:
-                continue
+        with open(path, "r") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
 
-    # 2. Display Tables
+                try:
+                    data = json.loads(line)
+                    side = data.get("outcome_side", "UNKNOWN").upper()
+
+                    if side == "YES":
+                        yes_records.append(data)
+                    elif side == "NO":
+                        no_records.append(data)
+                    else:
+                        # You can add a list for 'unknown' if you have old data
+                        pass
+                except json.JSONDecodeError:
+                    continue
+
+    if not yes_records and not no_records:
+        print("No data found in provided files.")
+        return
+
     print_table("YES TOKEN LIQUIDITY", yes_records)
     print_table("NO TOKEN LIQUIDITY", no_records)
 
 
 if __name__ == "__main__":
-    main()
+    parser = argparse.ArgumentParser(
+        description="Analyze logged Polymarket liquidity JSONL files."
+    )
+    parser.add_argument(
+        "files",
+        nargs="*",
+        help="One or more JSONL files to analyze. Defaults to polymarket_liquidity.jsonl",
+    )
+
+    args = parser.parse_args()
+    main(args.files if args.files else None)
