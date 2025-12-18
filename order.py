@@ -38,7 +38,7 @@ class EarningsMarket:
         self.slug: str = polymarket_api.Utils.extract_slug_from_url(url)
         self.ticker: str = polymarket_api.Utils.extract_ticker_from_slug(self.slug)
         self.cik: str = str(EDGAR().get_cik_by_ticker(self.ticker))
-
+        print(f"Registered ticker: {self.ticker}")
         self.description = polymarket_api.DataFeed.get_slug_description(self.slug)
         self.outcome_addresses: dict = (
             polymarket_api.DataFeed.get_slug_outcome_addresses(self.slug)
@@ -97,7 +97,7 @@ class EarningsMarket:
         self.edgar_sentinel.set_alert(self.cik, self)
         self.thread = Thread(target=self.trade)
         self.thread.start()
-        # self.start_liquidity_logger(self.slug)
+        self.start_liquidity_logger(self.slug)
         self.price_tracker:PriceTracker = PriceTracker(self.slug)
 
 
@@ -158,11 +158,31 @@ if __name__ == "__main__":
     # kfy_url = "https://polymarket.com/event/kfy-quarterly-earnings-nongaap-eps-12-04-2025-1pt31"
     # kfy_em = EarningsMarket(kfy_url, edgar_sentinel)
 
-    len_url = "https://polymarket.com/event/len-quarterly-earnings-gaap-eps-12-16-2025-2pt22"
-    len_em = EarningsMarket(len_url, edgar_sentinel)
+    # len_url = "https://polymarket.com/event/len-quarterly-earnings-gaap-eps-12-16-2025-2pt22"
+    # len_em = EarningsMarket(len_url, edgar_sentinel)
 
-    gis_url = "https://polymarket.com/event/gis-quarterly-earnings-nongaap-eps-12-17-2025-1pt02"
-    gis_em = EarningsMarket(gis_url, edgar_sentinel)
+    # gis_url = "https://polymarket.com/event/gis-quarterly-earnings-nongaap-eps-12-17-2025-1pt02"
+    # gis_em = EarningsMarket(gis_url, edgar_sentinel)
+
+
+
+    payx_url = "https://polymarket.com/event/payx-quarterly-earnings-nongaap-eps-12-18-2025-1pt23"
+    nke_url = "https://polymarket.com/event/nke-quarterly-earnings-gaap-eps-12-18-2025-0pt37"
+    kbh_url = "https://polymarket.com/event/kbh-quarterly-earnings-gaap-eps-12-18-2025-1pt79"
+    edx_url = "https://polymarket.com/event/fdx-quarterly-earnings-nongaap-eps-12-18-2025-4pt03"
+
+    payx_em = EarningsMarket(payx_url, edgar_sentinel)
+    nke_em = EarningsMarket(nke_url, edgar_sentinel)
+    kbh_em = EarningsMarket(kbh_url, edgar_sentinel)
+    edx_url = EarningsMarket(edx_url, edgar_sentinel)
+
+    ccl_url = "https://polymarket.com/event/ccl-quarterly-earnings-nongaap-eps-12-19-2025-0pt25"
+    lw_url = "https://polymarket.com/event/lw-quarterly-earnings-nongaap-eps-12-19-2025-0pt63"
+    cag_url = "https://polymarket.com/event/cag-quarterly-earnings-nongaap-eps-12-19-2025-0pt44"
+
+    ccl_em = EarningsMarket(ccl_url, edgar_sentinel)
+    lw_em = EarningsMarket(lw_url, edgar_sentinel)
+    cag_em = EarningsMarket(cag_url, edgar_sentinel)
 
 
     print("Market is runnning...")
