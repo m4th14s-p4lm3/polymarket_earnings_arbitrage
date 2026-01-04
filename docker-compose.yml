@@ -1,0 +1,51 @@
+name: polymarket-earnings-arbitrage
+services:
+  app:
+    build:
+      context: .
+    image: polymarket-earnings-arbitrage:latest
+    restart: on-failure
+    container_name: app
+    env_file:
+      - .env
+    volumes:
+      - ./logs:/app/logs
+    networks:
+      - arbitrage
+  prometheus:
+    image: prom/prometheus:v3.8.1
+    container_name: prometheus
+    volumes:
+      - ./config/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    networks:
+      - arbitrage
+    restart: unless-stopped
+  grafana:
+    image: grafana/grafana:12.3
+    container_name: grafana
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./config/grafana/provisioning:/etc/grafana/provisioning
+      # contains dashboard for showing custom app metrics
+      - ./config/grafana/dashboards:/var/lib/grafana/dashboards
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    depends_on:
+      - prometheus
+    ports:
+      - "3000:3000"
+    networks:
+      - arbitrage
+    restart: unless-stopped
+
+networks:
+  arbitrage:
+
+volumes:
+  prometheus_data:
+  grafana_data:

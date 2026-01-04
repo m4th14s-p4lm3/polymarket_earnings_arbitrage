@@ -5,6 +5,9 @@ from typing import Dict
 import time
 import json
 
+from prometheus_client import start_http_server
+
+from metrics import ORACLE_RESOLUTION, ORACLE_RESOLUTION_TIME, POLYMARKET_MARKET_VOLUME_USD, POLYMARKET_TOKEN_PRICE_USD, POLYMARKET_USD_EARNED, POLYMARKET_WATCHED_MARKETS
 import polymarket_api
 from polymarket_api import TradingClient
 
@@ -104,6 +107,8 @@ class EarningsMarket:
 
 
     def trade(self):
+        POLYMARKET_WATCHED_MARKETS.labels(cik=self.cik, ticker=self.ticker).inc()
+        
         # while True:
         # self.alert.clear()
         self.alert.wait()
@@ -114,6 +119,11 @@ class EarningsMarket:
         price_yes = polymarket_api.DataFeed.get_market_price_for_token(self.outcome_addresses["Yes"])
         price_no = polymarket_api.DataFeed.get_market_price_for_token(self.outcome_addresses["No"])
         logger.info(f"Price after trigger - slug: {self.slug}, ticker: {self.ticker}, price_yes {price_yes}, price_no: {price_no}")
+        try:
+            POLYMARKET_TOKEN_PRICE_USD.labels(cik=self.cik, ticker=self.ticker, slug=self.slug, event='edgar_alert', outcome='Yes').set(float(price_yes))
+            POLYMARKET_TOKEN_PRICE_USD.labels(cik=self.cik, ticker=self.ticker, slug=self.slug, event='edgar_alert', outcome='No').set(float(price_no))
+        except (ValueError, TypeError):
+            pass
 
         timer_start = time.perf_counter()
         resolution = get_resolution(self.description, self.sec_url)
@@ -124,6 +134,24 @@ class EarningsMarket:
         if resolution != "not enough informations":
             resolution = resolution[0].upper() + resolution[1:].lower()
             address = self.outcome_addresses[resolution]
+            # get pricee after oracle
+            price = polymarket_api.DataFeed.get_market_price_for_token(address)
+            telegram_bot.send_message(f"slug: {self.slug}, ticker: {self.ticker}, resolution: {resolution}, price: {price}, oracle time: {self.oracle_time}")
+            logger.info(f"slug: {self.slug}, ticker: {self.ticker}, resolution: {resolution}, price: {price}, oracle time: {self.oracle_time}")
+            try:
+                POLYMARKET_TOKEN_PRICE_USD.labels(cik=self.cik, ticker=self.ticker, slug=self.slug, event='oracle_resolution', outcome=resolution).set(float(price))
+            except (ValueError, TypeError):
+                pass
+        else:
+            price_yes = polymarket_api.DataFeed.get_market_price_for_token(self.outcome_addresses["Yes"])
+            price_no = polymarket_api.DataFeed.get_market_price_for_token(self.outcome_addresses["No"])
+            logger.info(f"slug: {self.slug}, ticker: {self.ticker}, resolution: {resolution}, price_yes {price_yes}, price_no: {price_no}, oracle time: {self.oracle_time}")
+            telegram_bot.send_message(f"slug: {self.slug}, ticker: {self.ticker}, resolution: {resolution}, price_yes {price_yes}, price_no: {price_no}, oracle time: {self.oracle_time}")
+            try:
+                POLYMARKET_TOKEN_PRICE_USD.labels(cik=self.cik, ticker=self.ticker, slug=self.slug, event='oracle_resolution', outcome='Yes').set(float(price_yes))
+                POLYMARKET_TOKEN_PRICE_USD.labels(cik=self.cik, ticker=self.ticker, slug=self.slug, event='oracle_resolution', outcome='No').set(float(price_no))
+            except (ValueError, TypeError):
+                pass
 
             price_str = polymarket_api.DataFeed.get_market_price_for_token(address)
             try:
@@ -171,12 +199,39 @@ class EarningsMarket:
             )
 
         # self.thred.join()
+        ORACLE_RESOLUTION_TIME.labels(cik=self.cik, ticker=self.ticker, slug=self.slug).set(self.oracle_time)
+        ORACLE_RESOLUTION.labels(cik=self.cik, ticker=self.ticker, slug=self.slug, outcome=resolution).inc()
 
     def __str__(self) -> str:
         return self.cik
 
 
 if __name__ == "__main__":
+    LOG_DIR = "logs"
+    if not os.path.isdir(LOG_DIR):
+        os.mkdir(LOG_DIR)
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        filename=f'logs/sec_sentinel.log',
+        filemode='a'
+    )
+
+    edgar_sentinel = EdgarSentinel()
+    urls = os.environ.get("POLYMARKET_URLS")
+    if urls == None:
+        logger.error("No markets supplied with POLYMARKET_URLS, stopping...")
+        exit(1)
+    markets = [EarningsMarket(url, edgar_sentinel) for url in urls.splitlines()]
+    logger.info("Watching markets " + ", ".join(urls.splitlines()))
+    logger.info("Market is runnning...")
+    
+    start_http_server(9090)
+    logger.info("Prometheus HTTP server running...")
+    
+    edgar_sentinel.run()
+    logger.info("Sentinel is running...")
     edgar_sentinel = EdgarSentinel()
     time.sleep(1)
 
