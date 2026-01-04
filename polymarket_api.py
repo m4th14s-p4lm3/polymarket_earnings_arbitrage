@@ -5,6 +5,76 @@ import json
 import numpy as np
 from datetime import datetime, timedelta, timezone
 
+# --- TRADING PART -------------------------------------------------
+
+import os
+from py_clob_client.client import ClobClient
+from py_clob_client.constants import POLYGON
+from py_clob_client.clob_types import OrderArgs
+from py_clob_client.order_builder.constants import BUY, SELL
+
+
+class TradingClient:
+    """
+    Jednoduchý wrapper kolem Polymarket CLOB klienta.
+
+    - připojí se k účtu přes privátní klíč
+    - umí poslat limitní order na konkrétní token_id (YES/NO outcome)
+    """
+
+    def __init__(
+        self,
+        private_key: str | None = None,
+        host: str = "https://clob.polymarket.com",
+        chain_id: int = POLYGON,
+        funder: str | None = None,
+    ) -> None:
+        """
+        private_key – privátní klíč účtu, který má USDC na Polymarketu
+        funder      – adresa, ze které se bere balance (u EOA můžeš nechat None)
+        """
+        if private_key is None:
+            private_key = os.getenv("POLYMARKET_PK")
+        if not private_key:
+            raise RuntimeError("Missing private key. Set POLYMARKET_PK env var.")
+
+        self.client = ClobClient(
+            host,
+            key=private_key,
+            chain_id=chain_id,
+            funder=funder,
+        )
+
+        # L1 -> L2: vygeneruje nebo odvodí API key/secret/passphrase
+        self.client.set_api_creds(self.client.create_or_derive_api_creds())
+
+    def place_limit_order(
+        self,
+        token_id: str,
+        price: float,
+        size: float,
+        side: str = "BUY",
+    ) -> dict:
+        """
+        Pošle limit order (bet) na daný outcome token.
+
+        token_id – clobTokenId z Gamma API (to, co už máš v self.outcome_addresses)
+        price    – limitní cena 0.01–0.99
+        size     – kolik "shares" (viz docs – v praxi kolik kontraktů)
+        side     – "BUY" nebo "SELL"
+        """
+        side_const = BUY if side.upper() == "BUY" else SELL
+
+        order_args = OrderArgs(
+            price=price,
+            size=size,
+            side=side_const,
+            token_id=token_id,
+        )
+
+        # convenience: create + sign + post jedním call-em
+        resp = self.client.create_and_post_order(order_args)
+        return resp
 
 class Utils:
     @staticmethod

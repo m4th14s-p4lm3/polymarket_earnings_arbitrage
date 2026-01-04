@@ -6,6 +6,8 @@ import time
 import json
 
 import polymarket_api
+from polymarket_api import TradingClient
+
 from edgar_sentinel import EdgarSentinel
 from edgar_api import EDGAR
 from stats.liquidity_save import run_liquidity_logger
@@ -121,16 +123,39 @@ class EarningsMarket:
         resolution = resolution["resolution"]
         if resolution != "not enough informations":
             resolution = resolution[0].upper() + resolution[1:].lower()
-            # resolution = "Yes"
             address = self.outcome_addresses[resolution]
-            # get pricee after oracle
-            price = polymarket_api.DataFeed.get_market_price_for_token(address)
-            telegram_bot.send_message(
-                f"slug: {self.slug}, ticker: {self.ticker}, resolution: {resolution}, price: {price}, oracle time: {self.oracle_time}"
-            )
-            logger.info(
-                f"slug: {self.slug}, ticker: {self.ticker}, resolution: {resolution}, price: {price}, oracle time: {self.oracle_time}"
-            )
+
+            price_str = polymarket_api.DataFeed.get_market_price_for_token(address)
+            try:
+                market_price = float(price_str)
+            except (TypeError, ValueError):
+                market_price = None
+
+            msg_base = f"slug: {self.slug}, ticker: {self.ticker}, resolution: {resolution}, price: {price_str}, oracle time: {self.oracle_time}"
+
+            trade_resp = None
+            if market_price is not None:
+                try:
+                    max_price = market_price
+                    size = 10.0               # TODO: set sizing by your own
+                    if os.getenv("ENABLE_TRADING") == "true":
+                        trade_resp = trade_resp = trading_client.place_limit_order(
+                            token_id=address,
+                            price=max_price,
+                            size=size,
+                            side="BUY" if resolution == "Yes" else "SELL",
+                        )
+                    else:
+                        trade_resp = {"status": "dry_run"}
+                    
+                    logger.info(f"Trade response for {self.slug}: {trade_resp}")
+                except Exception as e:
+                    logger.exception(f"Error placing order for {self.slug}: {e}")
+                    trade_resp = {"error": str(e)}
+
+            full_msg = msg_base + f", trade_resp: {trade_resp}"
+            telegram_bot.send_message(full_msg)
+            logger.info(full_msg)
         else:
             price_yes = polymarket_api.DataFeed.get_market_price_for_token(
                 self.outcome_addresses["Yes"]
