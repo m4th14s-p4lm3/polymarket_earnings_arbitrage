@@ -1,3 +1,4 @@
+from urllib.parse import urlparse
 import requests
 import json
 import time
@@ -195,6 +196,45 @@ class EDGAR:
         path = os.path.join(download_path, document_name + ".pdf")
         pdfkit.from_url(document_url, path)
         # HTML(document_url).write_pdf(path)
+
+        return path
+
+    def download_document(self, document_url, download_path, document_name):
+        headers = {
+            "User-Agent": "tab_team3 polymarket_earnings_arbitrage tab_team3@example.com",
+            "Accept-Encoding": "gzip, deflate",
+            "Host": "www.sec.gov"
+        }
+        response = requests.get(document_url, headers=headers, stream=True, timeout=30)
+        response.raise_for_status()
+
+        # 1. Try to infer extension from URL
+        parsed_url = urlparse(document_url)
+        _, ext = os.path.splitext(parsed_url.path)
+
+        # 2. Fallback: infer from Content-Type header
+        if not ext:
+            content_type = response.headers.get("Content-Type", "").split(";")[0]
+            content_type_map = {
+                "text/html": ".html",
+                "text/plain": ".txt",
+                "application/pdf": ".pdf",
+                "application/xml": ".xml",
+                "text/xml": ".xml",
+                "application/json": ".json"
+            }
+            ext = content_type_map.get(content_type, "")
+
+        # 3. Final fallback
+        if not ext:
+            ext = ".bin"
+
+        path = os.path.join(download_path, f"{document_name}{ext}")
+
+        with open(path, "wb") as f:
+            for chunk in response.iter_content(chunk_size=8192):
+                if chunk:
+                    f.write(chunk)
 
         return path
 
