@@ -52,3 +52,6 @@ Edit the market URLs in `order.py` to track different earnings markets.
 ## Other Utilities
 - `backtest.py` runs historical backtests against saved data.
 - `model.py` contains a structured oracle implementation used in backtesting.
+
+## Warning
+This trading software is provided strictly for educational and informational purposes only and does not constitute financial, investment, legal, or tax advice. The authors and contributors make no representations or warranties regarding the accuracy, completeness, or reliability of the software or any outputs it may produce. Use of this software is entirely at your own risk, and you remain solely responsible for any decisions, trades, losses, or other outcomes resulting from its use. By using this software, you acknowledge and agree that the authors and contributors will not be liable for any direct or indirect damages, including but not limited to financial loss, loss of profits, or other consequential damages arising from the use or inability to use the software.
