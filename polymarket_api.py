@@ -78,15 +78,15 @@ class TradingClient:
 
 class Utils:
     @staticmethod
-    def extract_ticker_from_slug(slug)->str:
+    def extract_ticker_from_slug(slug) -> str:
         return slug.split("-")[0].upper()
 
     @staticmethod
-    def extract_slug_from_url(url)->str:
+    def extract_slug_from_url(url) -> str:
         return url.split("/")[-1]
 
     @staticmethod
-    def extract_expected_release_date(slug)->datetime:
+    def extract_expected_release_date(slug) -> datetime:
         slug_split = slug.split("-")
 
         if len(slug_split[5]) == 4:
@@ -100,6 +100,7 @@ class Utils:
         dt = datetime(y, m, d, tzinfo=timezone.utc)
         return dt
 
+
 class DataFeed:
     @staticmethod
     def get_slug_description(slug):
@@ -109,9 +110,9 @@ class DataFeed:
         resp_json = json.loads(resp.text)
         description = resp_json["description"]
         return description
-    
+
     @staticmethod
-    def get_slug_outcome_addresses(slug)->dict:
+    def get_slug_outcome_addresses(slug) -> dict:
         url = "https://gamma-api.polymarket.com/markets/slug/" + slug
         resp = requests.get(url)
         resp.raise_for_status()
@@ -125,14 +126,11 @@ class DataFeed:
         closed = resp_json["closed"]
         created_at = resp_json["createdAt"]
 
-        outcome_addresses = {
-                                outcomes[0] : clobTokenIds[0],
-                                outcomes[1] : clobTokenIds[1]             
-                            }
+        outcome_addresses = {outcomes[0]: clobTokenIds[0], outcomes[1]: clobTokenIds[1]}
         return outcome_addresses
-    
+
     @staticmethod
-    def get_slug_data(slug)->dict:
+    def get_slug_data(slug) -> dict:
         url = "https://gamma-api.polymarket.com/markets/slug/" + slug
         resp = requests.get(url)
         resp.raise_for_status()
@@ -146,21 +144,18 @@ class DataFeed:
         closed = resp_json["closed"]
         created_at = resp_json["createdAt"]
 
-        outcome_addresses = {
-                                outcomes[0] : clobTokenIds[0],
-                                outcomes[1] : clobTokenIds[1]             
-                            }
-        
-        return {    
-                    "description" : description,
-                    "outcome_prices" : outcome_prices,
-                    "outcome_addresses" : outcome_addresses,
-                    "closed" : closed,
-                    "created_at" : created_at,
-                }
+        outcome_addresses = {outcomes[0]: clobTokenIds[0], outcomes[1]: clobTokenIds[1]}
+
+        return {
+            "description": description,
+            "outcome_prices": outcome_prices,
+            "outcome_addresses": outcome_addresses,
+            "closed": closed,
+            "created_at": created_at,
+        }
 
     @staticmethod
-    def get_price_history_for_token(token_id, start_dt, end_dt)->list:
+    def get_price_history_for_token(token_id, start_dt, end_dt) -> list:
         HOST = "https://clob.polymarket.com"
 
         start_ts = int(start_dt.timestamp())
@@ -172,7 +167,7 @@ class DataFeed:
                 "market": token_id,
                 "startTs": start_ts,
                 "endTs": end_ts,
-            }
+            },
         )
 
         resp.raise_for_status()
@@ -189,11 +184,7 @@ class DataFeed:
     def get_market_price_for_token(token_id):
         HOST = "https://clob.polymarket.com/"
         resp = requests.get(
-            f"{HOST}/price",
-            params={
-                "token_id": token_id,
-                "side": "SELL"
-            }
+            f"{HOST}/price", params={"token_id": token_id, "side": "SELL"}
         )
         return resp.text
 
@@ -204,11 +195,17 @@ if __name__ == "__main__":
     slug_data = DataFeed.get_slug_data(slug)
 
     resolve = None
-    if float(slug_data["outcome_prices"][0]) == 1.0 and float(slug_data["outcome_prices"][1]) == 0.0:
+    if (
+        float(slug_data["outcome_prices"][0]) == 1.0
+        and float(slug_data["outcome_prices"][1]) == 0.0
+    ):
         resolve = "Yes"
-    if float(slug_data["outcome_prices"][0]) == 0.0 and float(slug_data["outcome_prices"][1]) == 1.0: 
+    if (
+        float(slug_data["outcome_prices"][0]) == 0.0
+        and float(slug_data["outcome_prices"][1]) == 1.0
+    ):
         resolve = "No"
-    
+
     print(slug_data)
     # print(slug_data["outcome_prices"][0])
     # 16, 6, 57
@@ -224,13 +221,14 @@ if __name__ == "__main__":
     prices = DataFeed.get_price_history_for_token(address, start_dt, end_dt)
     # print(address)
     # print(res)
-    dt_release = datetime.datetime(2025, 10, 21, 6, 53, 12, tzinfo=datetime.timezone.utc)
+    dt_release = datetime.datetime(
+        2025, 10, 21, 6, 53, 12, tzinfo=datetime.timezone.utc
+    )
     unix_ts = dt_release.timestamp()
     # print(prices)
 
     for p in prices:
         if int(p[0]) > unix_ts:
             print(p)
-
 
     # print(get_market_price_for_token(address))

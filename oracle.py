@@ -8,6 +8,7 @@ from typing import Optional, List
 from dotenv import load_dotenv
 from google import genai
 from google.genai import types
+
 load_dotenv()
 
 from edgar_api import EDGAR
@@ -47,7 +48,7 @@ def send_prompt_with_pdfs(prompt: str, file_paths: Optional[List[str]] = None) -
     api_key = os.environ.get("GEMINI_API_KEY")
     if not api_key:
         return "Error: GEMINI_API_KEY environment variable not found."
-    
+
     try:
         client = genai.Client(api_key=api_key)
     except Exception as e:
@@ -55,11 +56,11 @@ def send_prompt_with_pdfs(prompt: str, file_paths: Optional[List[str]] = None) -
 
     model = "gemini-2.5-flash"
     uploaded_files: List[genai.types.File] = []
-    
+
     try:
         # 1. Start the content list with the text prompt
         contents: List[genai.types.Part] = [prompt]
-        
+
         # 2. Upload all files if paths are provided
         if file_paths:
             # print("Starting file uploads...")
@@ -67,14 +68,14 @@ def send_prompt_with_pdfs(prompt: str, file_paths: Optional[List[str]] = None) -
                 if not os.path.exists(path):
                     # print(f"Warning: File not found at path: {path}. Skipping.")
                     continue
-                
+
                 # print(f"Uploading: {os.path.basename(path)}...")
                 uploaded_file = client.files.upload(file=path)
                 uploaded_files.append(uploaded_file)
-                contents.append(uploaded_file) # Add file object to contents
-            
+                contents.append(uploaded_file)  # Add file object to contents
+
             if not uploaded_files:
-                 return "Error: No valid files were uploaded."
+                return "Error: No valid files were uploaded."
             # print("All files uploaded successfully.")
 
         # 3. Call the API with combined content (files + prompt)
@@ -83,10 +84,10 @@ def send_prompt_with_pdfs(prompt: str, file_paths: Optional[List[str]] = None) -
             contents=contents,
         )
         return response.text
-        
+
     except Exception as e:
         return f"Error during content generation: {e}"
-        
+
     finally:
         # 4. Clean up: Delete all uploaded files from the API service
         if uploaded_files:
@@ -97,6 +98,7 @@ def send_prompt_with_pdfs(prompt: str, file_paths: Optional[List[str]] = None) -
                 except Exception as del_e:
                     print(f"Error deleting file {f.name}: {del_e}")
             # print("Cleanup complete.")
+
 
 # def get_resolution(desc: str, sec_url: str):
 #     urls = edgar.extract_htm_urls(sec_url)
@@ -123,7 +125,8 @@ def send_prompt_with_pdfs(prompt: str, file_paths: Optional[List[str]] = None) -
 
 #     return res
 
-def get_resolution(desc:str, sec_url:str):
+
+def get_resolution(desc: str, sec_url: str):
     urls = edgar.extract_htm_urls(sec_url)
 
     with tempfile.TemporaryDirectory() as tmp:
@@ -131,10 +134,10 @@ def get_resolution(desc:str, sec_url:str):
         start_time = time.perf_counter()
         for i, u in enumerate(urls):
             # print(u)
-            edgar.download_pdf_document(u, tmp,f"{i}")
+            edgar.download_pdf_document(u, tmp, f"{i}")
             logger.info(f"Downloading file - {u}")
             tmp_files.append(os.path.join(tmp, f"{i}.pdf"))
-        logger.info(f"files download time: {time.perf_counter()-start_time} ")
+        logger.info(f"files download time: {time.perf_counter() - start_time} ")
 
         res = send_prompt_with_pdfs(prompt_prefix + desc, tmp_files)
         # res = json.loads(res)
@@ -160,8 +163,6 @@ Note: For the purposes of this market, IFRS EPS will be treated as GAAP EPS.
 Note: For the purposes of this market, GAAP EPS refers to diluted GAAP EPS, unless this is not published, in which case it refers to basic GAAP EPS.
 Note: All figures are expressed in USD, unless otherwise indicated.
 """
-    
-    
 
     from edgar_api import EDGAR
 
@@ -171,14 +172,13 @@ Note: All figures are expressed in USD, unless otherwise indicated.
     # for i, u in enumerate(urls):
     #     print(u)
     #     edgar.download_pdf_document(u, "data",f"{i}")
-    
-    
+
     # res = send_prompt_with_pdfs(prompt_prefix + desc, ["data/0.pdf", "data/1.pdf", "data/2.pdf"])
-    res = get_resolution(desc, "http://sec.gov/Archives/edgar/data/20212/000002021225000134")
+    res = get_resolution(
+        desc, "http://sec.gov/Archives/edgar/data/20212/000002021225000134"
+    )
     # print(res["resolution"])
     print(res)
-    
+
     # print(urls)
     # edgar.download_pdf_document()
-
-
