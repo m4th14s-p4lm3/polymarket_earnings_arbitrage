@@ -7,18 +7,8 @@ import os
 from threading import Thread, Event
 
 from edgar_api import EDGAR
+from metrics import EDGAR_RSS_FEED_SUBMITIONS
 # from order import EarningsMarket
-
-LOG_DIR = "logs"
-if not os.path.isdir(LOG_DIR):
-    os.mkdir(LOG_DIR)
-
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    filename=f'logs/sec_sentinel.log',
-    filemode='a'
-)
 
 class EdgarSentinel:
     def __init__(self):
@@ -80,6 +70,7 @@ class EdgarSentinel:
                             print(data)
 
                             self.logger.info(json.dumps(data))
+                            EDGAR_RSS_FEED_SUBMITIONS.labels(cik=cik).inc()
                     old_feed = feed
             except Exception as e:
                 self.running = False

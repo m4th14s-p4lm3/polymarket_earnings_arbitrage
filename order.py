@@ -4,6 +4,9 @@ from datetime import datetime, timedelta, timezone
 import time
 import json
 
+from prometheus_client import start_http_server
+
+from metrics import ORACLE_RESOLUTION, ORACLE_RESOLUTION_TIME, POLYMARKET_MARKET_VOLUME_USD, POLYMARKET_TOKEN_PRICE_USD, POLYMARKET_USD_EARNED, POLYMARKET_WATCHED_MARKETS
 import polymarket_api
 from edgar_sentinel import EdgarSentinel
 from edgar_api import EDGAR
@@ -63,6 +66,8 @@ class EarningsMarket:
         self.thread.start()
         
     def trade(self):
+        POLYMARKET_WATCHED_MARKETS.labels(cik=self.cik, ticker=self.ticker).inc()
+        
         # while True:
             # self.alert.clear()
         self.alert.wait()
@@ -73,6 +78,11 @@ class EarningsMarket:
         price_yes = polymarket_api.DataFeed.get_market_price_for_token(self.outcome_addresses["Yes"])
         price_no = polymarket_api.DataFeed.get_market_price_for_token(self.outcome_addresses["No"])
         logger.info(f"Price after trigger - slug: {self.slug}, ticker: {self.ticker}, price_yes {price_yes}, price_no: {price_no}")
+        try:
+            POLYMARKET_TOKEN_PRICE_USD.labels(cik=self.cik, ticker=self.ticker, slug=self.slug, event='edgar_alert', outcome='Yes').set(float(price_yes))
+            POLYMARKET_TOKEN_PRICE_USD.labels(cik=self.cik, ticker=self.ticker, slug=self.slug, event='edgar_alert', outcome='No').set(float(price_no))
+        except (ValueError, TypeError):
+            pass
 
         timer_start = time.perf_counter()
         resolution = get_resolution(self.description, self.sec_url)
@@ -88,70 +98,51 @@ class EarningsMarket:
             price = polymarket_api.DataFeed.get_market_price_for_token(address)
             telegram_bot.send_message(f"slug: {self.slug}, ticker: {self.ticker}, resolution: {resolution}, price: {price}, oracle time: {self.oracle_time}")
             logger.info(f"slug: {self.slug}, ticker: {self.ticker}, resolution: {resolution}, price: {price}, oracle time: {self.oracle_time}")
+            try:
+                POLYMARKET_TOKEN_PRICE_USD.labels(cik=self.cik, ticker=self.ticker, slug=self.slug, event='oracle_resolution', outcome=resolution).set(float(price))
+            except (ValueError, TypeError):
+                pass
         else:
             price_yes = polymarket_api.DataFeed.get_market_price_for_token(self.outcome_addresses["Yes"])
             price_no = polymarket_api.DataFeed.get_market_price_for_token(self.outcome_addresses["No"])
             logger.info(f"slug: {self.slug}, ticker: {self.ticker}, resolution: {resolution}, price_yes {price_yes}, price_no: {price_no}, oracle time: {self.oracle_time}")
             telegram_bot.send_message(f"slug: {self.slug}, ticker: {self.ticker}, resolution: {resolution}, price_yes {price_yes}, price_no: {price_no}, oracle time: {self.oracle_time}")
-
+            try:
+                POLYMARKET_TOKEN_PRICE_USD.labels(cik=self.cik, ticker=self.ticker, slug=self.slug, event='oracle_resolution', outcome='Yes').set(float(price_yes))
+                POLYMARKET_TOKEN_PRICE_USD.labels(cik=self.cik, ticker=self.ticker, slug=self.slug, event='oracle_resolution', outcome='No').set(float(price_no))
+            except (ValueError, TypeError):
+                pass
         # self.thred.join()
+        ORACLE_RESOLUTION_TIME.labels(cik=self.cik, ticker=self.ticker, slug=self.slug).set(self.oracle_time)
+        ORACLE_RESOLUTION.labels(cik=self.cik, ticker=self.ticker, slug=self.slug, outcome=resolution).inc()
 
 
     def __str__(self)->str:
         return self.cik
 
 if __name__ == "__main__":
+    LOG_DIR = "logs"
+    if not os.path.isdir(LOG_DIR):
+        os.mkdir(LOG_DIR)
+
+    logging.basicConfig(
+        level=logging.INFO,
+        format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+        filename=f'logs/sec_sentinel.log',
+        filemode='a'
+    )
+
     edgar_sentinel = EdgarSentinel()
-    # time.sleep(1)
+    urls = os.environ.get("POLYMARKET_URLS")
+    if urls == None:
+        logger.error("No markets supplied with POLYMARKET_URLS, stopping...")
+        exit(1)
+    markets = [EarningsMarket(url, edgar_sentinel) for url in urls.splitlines()]
+    logger.info("Watching markets " + ", ".join(urls.splitlines()))
+    logger.info("Market is runnning...")
     
-    # kfy_url = "https://polymarket.com/event/kfy-quarterly-earnings-nongaap-eps-12-04-2025-1pt31"
-    # kfy_em = EarningsMarket(kfy_url, edgar_sentinel)
-
-
-
-
-    # 10/12/2025
-    orcl_url = "https://polymarket.com/event/orcl-quarterly-earnings-nongaap-eps-12-08-2025-1pt64"
-
-    chwy_url = "https://polymarket.com/event/chwy-quarterly-earnings-nongaap-eps-12-10-2025-0pt3"
-    adbe_url = "https://polymarket.com/event/adbe-quarterly-earnings-nongaap-eps-12-10-2025-5pt4"
-    mnt_url = "https://polymarket.com/event/mtn-quarterly-earnings-gaap-eps-12-10-2025-neg5pt24"
-
-    orcl_em = EarningsMarket(orcl_url, edgar_sentinel)
-    
-    chwy_em = EarningsMarket(chwy_url, edgar_sentinel)
-    adbe_em = EarningsMarket(adbe_url, edgar_sentinel)
-    mnt_em = EarningsMarket(mnt_url, edgar_sentinel)
-
-    # 11/12/2025
-    cost_url = "https://polymarket.com/event/cost-quarterly-earnings-gaap-eps-12-11-2025-4pt28"
-    avgo_url = "https://polymarket.com/event/avgo-quarterly-earnings-nongaap-eps-12-11-2025-1pt87"
-    rh_url = "https://polymarket.com/event/rh-quarterly-earnings-nongaap-eps-12-11-2025-2pt16"
-    lulu_url = "https://polymarket.com/event/lulu-quarterly-earnings-gaap-eps-12-11-2025-2pt21"
-
-    cost_em = EarningsMarket(cost_url, edgar_sentinel)
-    avgo_em = EarningsMarket(avgo_url, edgar_sentinel)
-    rh_em = EarningsMarket(rh_url, edgar_sentinel)
-    lulu_em = EarningsMarket(lulu_url, edgar_sentinel)
-
-
-
-    # pcb_url = "https://polymarket.com/event/cpb-quarterly-earnings-nongaap-eps-12-09-2025-0pt73?tid=1765226600660"
-    # azo_url = "https://polymarket.com/event/azo-quarterly-earnings-gaap-eps-12-09-2025-32pt58?tid=1765226611220"
-    # dbi_url = "https://polymarket.com/event/dbi-quarterly-earnings-nongaap-eps-12-09-2025-0pt16?tid=1765226624433"
-    # aso_url = "https://polymarket.com/event/aso-quarterly-earnings-nongaap-eps-12-09-2025-1pt06?tid=1765226633644"
-    
-    
-
-    # pcb_em = EarningsMarket(pcb_url, edgar_sentinel)
-    # azo_em = EarningsMarket(azo_url, edgar_sentinel)
-    # dbi_em = EarningsMarket(dbi_url, edgar_sentinel)
-    # aso_em = EarningsMarket(aso_url, edgar_sentinel)
-
-
-    print("Market is runnning...")
+    start_http_server(9090)
+    logger.info("Prometheus HTTP server running...")
     
     edgar_sentinel.run()
-    print("Sentinel is running...")
-
-    # pass
+    logger.info("Sentinel is running...")
