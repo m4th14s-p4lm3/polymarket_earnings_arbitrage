@@ -22,6 +22,7 @@ AGENT_RULES = """You are a block chain oracle for polymarket, and you will be pr
 
 
 class Oracle:
+    """Oracle that uses Gemini API to resolve SEC filings based on provided rules."""
     def __init__(
             self,
             edgar_instance: EDGAR,

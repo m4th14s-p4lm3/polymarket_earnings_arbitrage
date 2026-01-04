@@ -15,13 +15,16 @@ import numpy as np
 
 import bisect
 
+# Note that the backtested results are just approximations. More frequent datapoints then 1 per minute would be needed for more accurate simulation.
 class LinearTimeSeries:
+    """A simple linear time series interpolator."""
     def __init__(self, points):
         # assume points are sorted by timestamp
         self.timestamps = [t for t, _ in points]
         self.values = [v for _, v in points]
 
     def query(self, t):
+        """Query the time series at time t with linear interpolation."""
         # handle boundaries explicitly
         if t <= self.timestamps[0]:
             return self.values[0]
@@ -35,6 +38,18 @@ class LinearTimeSeries:
 
         # linear interpolation
         return v0 + (t - t0) * (v1 - v0) / (t1 - t0)
+
+    def query_left(self, t):
+        if t <= self.timestamps[0]:
+            return self.values[0]
+        i = bisect.bisect_right(self.timestamps, t) - 1
+        return self.values[i]
+
+    def query_right(self, t):
+        if t >= self.timestamps[-1]:
+            return self.values[-1]
+        i = bisect.bisect_left(self.timestamps, t)
+        return self.values[i]
 
 
 
